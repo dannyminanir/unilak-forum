@@ -1,0 +1,56 @@
+FROM node:22-bookworm-slim AS assets
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build && rm -f public/hot
+
+FROM php:8.4-apache-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libonig-dev unzip \
+    && docker-php-ext-install mbstring pdo_mysql \
+    && a2enmod rewrite \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
+    APP_ENV=production \
+    APP_DEBUG=false \
+    LOG_CHANNEL=stderr \
+    LARAVEL_STORAGE_PATH=/tmp/laravel-storage \
+    VIEW_COMPILED_PATH=/tmp/laravel-storage/framework/views
+
+RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+    && sed -ri 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf \
+    && sed -ri 's!/var/run/apache2!/tmp/apache2!g; s!/var/lock/apache2!/tmp/apache2!g' /etc/apache2/envvars \
+    && printf 'upload_max_filesize=12M\npost_max_size=14M\n' > /usr/local/etc/php/conf.d/uploads.ini
+
+WORKDIR /var/www/html
+
+COPY composer.json composer.lock ./
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --no-scripts
+
+COPY . .
+COPY --from=assets /app/public/build ./public/build
+
+RUN rm -f public/hot \
+    && rm -rf public/storage \
+    && ln -s /tmp/laravel-storage/app/public public/storage \
+    && mkdir -p /tmp/laravel-storage/framework/cache/data /tmp/laravel-storage/framework/cache/locks /tmp/laravel-storage/framework/sessions /tmp/laravel-storage/framework/views /tmp/laravel-storage/logs /tmp/laravel-storage/app/private /tmp/laravel-storage/app/public \
+    && php artisan package:discover --ansi \
+    && chown -R www-data:www-data bootstrap/cache storage \
+    && chmod -R ug+rwX bootstrap/cache storage
+
+EXPOSE 80
+
+CMD ["sh", "-c", "mkdir -p /tmp/apache2 /tmp/laravel-storage/framework/cache/data /tmp/laravel-storage/framework/cache/locks /tmp/laravel-storage/framework/sessions /tmp/laravel-storage/framework/views /tmp/laravel-storage/logs /tmp/laravel-storage/app/private /tmp/laravel-storage/app/public && chown -R www-data:www-data /tmp/laravel-storage && exec apache2-foreground"]

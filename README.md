@@ -139,6 +139,19 @@ npm run build
 ```
 *(For active frontend development with hot-reload, run `npm run dev`)*
 
+### Deploy to Vercel
+
+This Laravel application uses Vercel's Container runtime via `Dockerfile.vercel`; it is not a static Vite site. Do not configure `dist` as its Output Directory.
+
+Before deploying, configure these Production environment variables in Vercel:
+
+- `APP_KEY` (generate with `php artisan key:generate --show`)
+- `APP_URL` (your deployed Vercel URL or custom domain)
+- `DB_CONNECTION=mysql`
+- `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` for a managed, externally reachable MySQL database
+
+Run `php artisan migrate --force` once against that production database before serving the app. Do not use the local SQLite database for production; Vercel container storage is ephemeral. Uploaded resources and profile photos also need persistent object storage for production—the current local `public` disk is not durable across container instances.
+
 ---
 
 ## 📂 Project Structure Highlights

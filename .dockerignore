@@ -1,0 +1,15 @@
+.git
+.claude
+node_modules
+vendor
+.env
+.env.*
+database/*.sqlite
+public/hot
+public/storage
+storage/app/public/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*.log
+bootstrap/cache/*.php
