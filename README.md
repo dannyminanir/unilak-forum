@@ -141,7 +141,7 @@ npm run build
 
 ### Deploy to Vercel
 
-This Laravel application uses Vercel's Container runtime via `Dockerfile.vercel`; it is not a static Vite site. Do not configure `dist` as its Output Directory.
+`vercel.json` explicitly selects Vercel's Container preset and `Dockerfile.vercel` builds the Laravel app; this is not a static Vite site. Leave the Output Directory blank instead of setting it to `dist`.
 
 Before deploying, configure these Production environment variables in Vercel:
 
